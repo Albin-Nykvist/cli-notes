@@ -10,6 +10,10 @@
 const char* NEW_NOTES_FOLDER = "new_notes";
 
 
+// TUI input
+#define MAX_INPUT_LENGTH 100
+
+
 void getFileName(char* buffer, char** words, int size) {
     strcpy(buffer, "");
     if(size <= 0) return;
@@ -62,28 +66,32 @@ bool hasFlag(char* flag, char ** argv, int argc) {
     return false;
 }
 
-void saveNote(char** words, int size) {
-        // if there is none, create a directory for new notes
-        if(_access(NEW_NOTES_FOLDER, 0) == -1) {
-            if(_mkdir(NEW_NOTES_FOLDER) == -1) {
-                perror("failed to create new notes folder\n");
-            }
+bool isNoteFile(char* filename) {
+    return (strcmp(filename, ".") != 0 && strcmp(filename, "..") != 0);
+}
+
+void createNewNote(char** words, int size) {
+    // if there is none, create a directory for new notes
+    if(_access(NEW_NOTES_FOLDER, 0) == -1) {
+        if(_mkdir(NEW_NOTES_FOLDER) == -1) {
+            perror("failed to create new notes folder\n");
         }
+    }
 
-        // create notefile and save it
-        char filename[FILE_PATH_LENGTH];
-        getFileName(filename, words, size);
+    // create notefile and save it
+    char filename[FILE_PATH_LENGTH];
+    getFileName(filename, words, size);
 
-        FILE *fptr;
+    FILE *file;
 
-        fptr = fopen(filename, "w");
+    file = fopen(filename, "w");
 
-        for (int i = 1; i < size; i++) {
-            fprintf(fptr, words[i]);
-            fprintf(fptr, " ");
-        }
+    for (int i = 1; i < size; i++) {
+        fprintf(file, words[i]);
+        fprintf(file, " ");
+    }
 
-        fclose(fptr);
+    fclose(file);
 }
 
 // Print all notes one at a time with some kind of user input for each print.
@@ -102,7 +110,83 @@ void saveNote(char** words, int size) {
 // [0] create new collection
 // [select collection: <number>]
 void reviewNewNotes() {
+    struct _finddata_t fileinfo; // Struct to store file information
+    intptr_t handle;             // Handle for directory searching
+    char directoryPath[FILE_PATH_LENGTH] = ""; 
+    strcat(directoryPath, NEW_NOTES_FOLDER);
+    strcat(directoryPath, "/*");
 
+    // Start searching for files
+    handle = _findfirst(directoryPath, &fileinfo);
+    if (handle == -1) {
+        printf("No files found in the directory.\n");
+        return;
+    }
+
+    // Iterate through all files in the directory
+    do {
+        if(isNoteFile(fileinfo.name)) {
+
+            // open the file and print its contents
+            FILE *file;               
+            char ch;                  
+            char path[FILE_PATH_LENGTH] = "";
+            strcat(path, NEW_NOTES_FOLDER);
+            strcat(path, "/");
+            strcat(path, fileinfo.name);
+
+            file = fopen(path, "r");
+            if (file == NULL) {
+                perror("Error opening file");
+                return;
+            }
+
+            while ((ch = fgetc(file)) != EOF) {
+                putchar(ch);
+            }
+            fclose(file);
+
+            // prompt the user
+            printf("\n[save: s | delete: d | ignore: enter]>");
+
+            // get input
+            char buffer[MAX_INPUT_LENGTH];
+            if(fgets(buffer, MAX_INPUT_LENGTH-1, stdin) == NULL) {
+                printf("Error reading input\n");
+                return;
+            }
+
+            if (buffer[strlen(buffer) - 1] != '\n') {
+                char c;
+                while ((c = getchar()) != '\n' && c != EOF);
+            }
+
+            buffer[strlen(buffer) - 1] = '\0';
+
+            // save, delete or ignore based on input
+            switch (buffer[0]) {
+            case 's':
+                printf("saved to ...\n");
+                break;
+            case 'd':
+                if(remove(path) == -1) {
+                    perror("Error: could not delete file\n");
+                }else {
+                    printf("deleted\n");
+                }
+                break;
+            default:
+                break;
+            }
+
+            printf("\n");
+            
+
+        }
+    } while (_findnext(handle, &fileinfo) == 0);
+
+    // Close the search handle
+    _findclose(handle);
 }
 
 // Print the collections list and ask what the user wants to do with a given collection.
@@ -140,9 +224,8 @@ int main(int argc, char** argv) {
     if(hasFlag("-r", argv, argc) || hasFlag("--review", argv, argc)) { // review
         reviewNewNotes();
 
-
     }else { // default: create note in the "new_notes" folder
-        saveNote(argv, argc);
+        createNewNote(argv, argc);
     }
 
 
