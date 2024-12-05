@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <direct.h>
@@ -42,26 +43,19 @@ void getFileName(char* buffer, char** words, int size) {
     }
 
     char* ending = "-.txt\0";
-    printf("Ending size: %d\n", strlen(ending));
-
-    printf("Num words: %d, size: %d\n", num_words_in_filename, size);
 
     for(int i=0; i<num_words_in_filename; i++) {
         if(strlen(buffer) + strlen(words[i]) + strlen(ending) + 1 > FILE_PATH_LENGTH) {
 
             // Cut off the word and concatinate onto the buffer.
             int sliceLength = FILE_PATH_LENGTH - strlen(buffer) - strlen(ending) - 1;
-            printf("%d\n", sliceLength);
             char slice[FILE_PATH_LENGTH] = "";
             strncpy(slice, words[i], sliceLength);
             strcat(buffer, slice);
-            printf("%s\n", buffer);
             strcat(buffer, ending);
-            printf("%s\n", buffer);
             return;
         }
         strcat(buffer, words[i]);
-        printf("%s\n", buffer);
 
         // If this is not the last word, add a space.
         if(i < num_words_in_filename) {
@@ -197,19 +191,15 @@ bool printCollections() {
     }
 }
 
-// Save to Collection:
-// [1] Chemistry, 32 notes
-// [2] Ethics, 12 notes
-// [3] Computer security, 4 notes
-// [select: <number> | create <new collection name>]>|
-void saveNoteToCollection(char* filePath) {
-    // get all collections and store them in an array
-    // check for empty
-    // print the array
-    // print prompt
-    // get input
-    // save or create + save
+const char *get_filename(const char *path) {
+    const char *filename = strrchr(path, '/'); // Find the last '/' in the path
+    if (filename) {
+        return filename + 1; // Move past the '/'
+    }
+    return path; // If no '/' found, return the original path
+}
 
+void saveNoteToCollection(char* filePath) {
 
     // create collection folder if there is none
     if(_access(COLLECTIONS_FOLDER, 0) == -1) {
@@ -237,68 +227,100 @@ void saveNoteToCollection(char* filePath) {
         }
     }while(_findnext(handle, &fileinfo) == 0);
 
-    // No collections found
-    /*
-    if(i == 1) {
-        return false;
-    }
-    return true;
-    */
+    int numCollections = i - 1;
+    struct _finddata_t* collections = (struct _finddata_t*)malloc((i - 1) * sizeof(struct _finddata_t)); 
+    handle = _findfirst(path, &fileinfo);
 
+    handle = _findfirst(path, &fileinfo);
+    if(handle == -1) {
+        printf("No files found in the directory.\n");
+    } 
 
+    i = 0;
+    do{
+        if(isDirectory(fileinfo) && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
+            collections[i] = fileinfo;
+            i++;
+        }
+    }while(_findnext(handle, &fileinfo) == 0);
 
-    if(printCollections()) {
+    if(i == 0) {
+        printf("no collections found\n");
+        printf("[create <new collection name>]>");
+    }else {
         printf("[select: <number> | create <new collection name>]>");
+    }
 
-        char buffer[MAX_INPUT_LENGTH] = "";
-        while(true) {
-            getInput(buffer, MAX_INPUT_LENGTH);
-            int size = sizeof(buffer) / sizeof(char);
-            if(size == 2 && isdigit(buffer[0])) {
 
-            }
+    // prompt user:
+    char input[MAX_INPUT_LENGTH];
+    while(true) {
+        getInput(input, MAX_INPUT_LENGTH);
+        int size = sizeof(input) / sizeof(char);
+        if(size < 2) {
+            printf("invalid input\n>");
+            continue;
+        }
+
+        if(isdigit(input[0])) {
+            char *endptr;
+            int inputNumber = strtol(input, &endptr, 10); // (base 10)
+
+            if(*endptr == '\0' && inputNumber <= numCollections) {
+                // save to collections[inputNumber - 1]
+                char newPath[FILE_PATH_LENGTH] = "";
+                strcat(newPath, COLLECTIONS_FOLDER); // path to collections directory
+                strcat(newPath, "/");
+                strcat(newPath, collections[inputNumber - 1].name);
+                strcat(newPath, "/");
+                strcat(newPath, get_filename(filePath));
+                if(rename(filePath, newPath) != 0) {
+                    perror("Error moving file");
+                    printf("from: %s, to: %s\n", filePath, newPath);
+                }
+                return;
             
-            if(isValidCollectionName(buffer)) {
-                char path[FILE_PATH_LENGTH] = "";
-                strcat(path, COLLECTIONS_FOLDER);
-                strcat(path, "/");
-                strcat(path, buffer);
-                if(_access(path, 0) == -1) {
-                    if(_mkdir(path) == -1) {
+            }else {
+                printf("invalid input\n>");
+                continue;
+            }
+        }else {
+            // treat it as a new collection
+            if(isValidCollectionName(input)) {
+                char newPath[FILE_PATH_LENGTH] = "";
+                strcat(newPath, COLLECTIONS_FOLDER);
+                strcat(newPath, "/");
+                strcat(newPath, input);
+                if(_access(newPath, 0) == -1) {
+                    if(_mkdir(newPath) == -1) {
                         perror("failed to create collections folder\n");
+                        continue;
                     }
                 }else {
                     printf("collection already exists\n");
-                    strcpy(buffer, ""); // empty the buffer to make it invalid
+                    continue;
                 }
-                break;
+
+                strcat(newPath, "/");
+                strcat(newPath, get_filename(filePath));
+                if(rename(filePath, newPath) != 0) {
+                    perror("Error moving file");
+                    printf("from: %s, to: %s\n", filePath, newPath);
+                }
+                return;
+
+
             }else {
-                printf("invalid collection name\n>");
+                printf("invalid input\n>");
+                continue;
             }
+
         }
 
-    }else {
-        noCollectionsFound();
+
     }
-
-
-    // save file to collection folder
 }
 
-// Print all notes one at a time with some kind of user input for each print.
-// After a note has been printed, you may choose to delete it, leave it in new_notes or save it to a note collection.
-
-// Note 1: 
-// The exam requires you to write at least 40 answers to the questions.
-// [save: s | delete: d | ignore: enter]
-
-// When s is pressed a list of saved note collections show up:
-
-// Save to Collection:
-// [1] Chemistry, 32 notes
-// [2] Ethics, 12 notes
-// [3] Computer security, 4 notes
-// [select: <number> | create <new collection name>]
 void reviewNewNotes() {
     struct _finddata_t fileinfo; // Struct to store file information
     intptr_t handle;             // Handle for directory searching
@@ -314,6 +336,7 @@ void reviewNewNotes() {
     }
 
     // Iterate through all files in the directory
+    int numNotes = 0;
     do{
         if(isNoteFile(fileinfo.name) && !isDirectory(fileinfo)) {
 
@@ -362,13 +385,17 @@ void reviewNewNotes() {
             }
 
             printf("\n");
-            
 
+            numNotes++;
         }
     } while (_findnext(handle, &fileinfo) == 0);
 
     // Close the search handle
     _findclose(handle);
+
+    if(numNotes <= 0) {
+        printf("No new notes to review.\n");
+    }
 }
 
 // Print the collections list and ask what the user wants to do with a given collection.
