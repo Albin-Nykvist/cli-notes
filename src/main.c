@@ -66,6 +66,14 @@ void getFileNameFromNote(char* buffer, char** words, int size) {
     strcat(buffer, ending);
 }
 
+const char* getFileNameFromPath(const char *path) {
+    const char *filename = strrchr(path, '/');
+    if(filename) {
+        return filename + 1;
+    }
+    return path; 
+}
+
 bool hasFlag(char* flag, char ** argv, int argc) {
     if(argc < 2) return false;
 
@@ -81,7 +89,7 @@ bool isNoteFile(char* filename) {
     return (strcmp(filename, ".") != 0 && strcmp(filename, "..") != 0);
 }
 
-bool isValidCollectionName(char* collectionName) {
+bool isValidCollectionName(const char* collectionName) {
     int size = sizeof(collectionName) / sizeof(char);
     if(size <= 0) return false;
     if(!isalpha(collectionName[0])) return false;
@@ -102,6 +110,31 @@ bool ensureDirectoryExists(const char * directoryPath) {
             return false;
         }
     }
+    return true;
+}
+
+bool createNewCollection(const char * collectionName) {
+    if(!ensureDirectoryExists(COLLECTIONS_FOLDER)) {
+        printf("failed to create collections folder, attempted path: %s\n", COLLECTIONS_FOLDER);
+        return false;
+    }
+    if(!isValidCollectionName(collectionName)) {
+        printf("invalid collection name: %s\n", collectionName);
+        return false;
+    }
+    char path[FILE_PATH_LENGTH] = "";
+    snprintf(path, sizeof(path), "%s/%s", COLLECTIONS_FOLDER, collectionName);
+
+    if(_access(path, 0) == 0) {
+        printf("collection already exists\n");
+        return false;
+    }
+
+    if(_mkdir(path) == -1) {
+        printf("failed to create new collection folder\n");
+        return false;
+    }
+    return true;
 }
 
 bool printFile(const char * path) {
@@ -140,6 +173,7 @@ void createNewNote(char** words, int size) {
 }
 
 int getNumCollections() {
+    ensureDirectoryExists(COLLECTIONS_FOLDER);
     struct _finddata_t fileinfo; 
     intptr_t handle;             
     char path[FILE_PATH_LENGTH] = ""; 
@@ -160,10 +194,24 @@ int getNumCollections() {
     return numCollections;
 }
 
+bool moveNoteToCollection(const char * notePath, const char * collectionName) {
+    char destinationPath[FILE_PATH_LENGTH] = "";
+    snprintf(destinationPath, sizeof(destinationPath), "%s/%s/%s", COLLECTIONS_FOLDER, collectionName, getFileNameFromPath(notePath));
+
+    if(rename(notePath, destinationPath) != 0) {
+        perror("Error moving file");
+        printf("from: %s, to: %s\n", notePath, destinationPath);
+        return false;
+    }
+    return true;
+}
+
 // Caller responsible for allocating collections and sending number of collections
 void getCollections(struct _finddata_t ** collections, int numCollections) {
 
     if(numCollections <= 0) return;
+
+    ensureDirectoryExists(COLLECTIONS_FOLDER);
 
     struct _finddata_t fileinfo; 
     intptr_t handle;             
@@ -184,18 +232,7 @@ void getCollections(struct _finddata_t ** collections, int numCollections) {
     }while(_findnext(handle, &fileinfo) == 0);
 }
 
-const char* getFileNameFromPath(const char *path) {
-    const char *filename = strrchr(path, '/');
-    if(filename) {
-        return filename + 1;
-    }
-    return path; 
-}
-
 void saveNoteToCollection(char* filePath) {
-
-    ensureDirectoryExists(COLLECTIONS_FOLDER);
-
     int numCollections = getNumCollections();
     struct _finddata_t * collections = (struct _finddata_t *)malloc(numCollections * sizeof(struct _finddata_t)); 
     getCollections(&collections, numCollections);
@@ -240,34 +277,22 @@ void saveNoteToCollection(char* filePath) {
                 continue;
             }
         }else { // User attempts to create and save the note to a new collection
-            if(isValidCollectionName(input)) {
-                char newPath[FILE_PATH_LENGTH] = "";
-                snprintf(newPath, sizeof(newPath), "%s/%s", COLLECTIONS_FOLDER, input);
 
-                if(_access(newPath, 0) == -1) {
-                    if(_mkdir(newPath) == -1) {
-                        perror("failed to create collections folder\n");
-                        continue;
-                    }
-                }else {
-                    printf("collection already exists\n>");
-                    continue;
-                }
-
-                snprintf(newPath, sizeof(newPath), "%s/%s", newPath, getFileNameFromPath(filePath));
-                if(rename(filePath, newPath) != 0) {
-                    perror("Error moving file");
-                    printf("from: %s, to: %s\n", filePath, newPath);
-                }
-                return;
-
-
-            }else {
-                printf("invalid input\n>");
+            if(!createNewCollection(input)) {
+                printf("failed to create new collection\n>");
                 continue;
             }
+
+            if(!moveNoteToCollection(filePath, input)) {
+                printf("failed to move note to new collection\n>");
+                continue;
+            }
+
+            break;
         }
     }
+
+    free(collections);
 }
 
 void reviewNewNotes() {
