@@ -30,7 +30,8 @@ void getInput(char* buffer, int size) {
     buffer[strlen(buffer) - 1] = '\0';
 }
 
-void getFileName(char* buffer, char** words, int size) {
+// Assumes the max buffer size is FILE_PATH_LENGTH
+void getFileNameFromNote(char* buffer, char** words, int size) {
     strcpy(buffer, "");
     if(size <= 0) return;
 
@@ -52,8 +53,7 @@ void getFileName(char* buffer, char** words, int size) {
             char slice[FILE_PATH_LENGTH] = "";
             strncpy(slice, words[i], sliceLength);
             strcat(buffer, slice);
-            strcat(buffer, ending);
-            return;
+            break;
         }
         strcat(buffer, words[i]);
 
@@ -92,23 +92,43 @@ bool isValidCollectionName(char* collectionName) {
 }
 
 bool isDirectory(struct _finddata_t fileinfo) {
-    return fileinfo.attrib & _A_SUBDIR;
+    return fileinfo.attrib & _A_SUBDIR && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0;
+}
+
+bool ensureDirectoryExists(const char * directoryPath) {
+    if(_access(directoryPath, 0) == -1) {
+        if(_mkdir(directoryPath) == -1) {
+            perror("failed to create folder\n");
+            return false;
+        }
+    }
+}
+
+bool printFile(const char * path) {
+    FILE *file;               
+    char ch;                  
+
+    file = fopen(path, "r");
+    if(file == NULL) {
+        perror("Error opening file");
+        return false;
+    }
+
+    while((ch = fgetc(file)) != EOF) {
+        putchar(ch);
+    }
+    fclose(file);
+    return true;
 }
 
 void createNewNote(char** words, int size) {
-    // if there is none, create a directory for new notes
-    if(_access(NEW_NOTES_FOLDER, 0) == -1) {
-        if(_mkdir(NEW_NOTES_FOLDER) == -1) {
-            perror("failed to create new notes folder\n");
-        }
-    }
+    ensureDirectoryExists(NEW_NOTES_FOLDER);
 
     // create notefile and save it
     char filename[FILE_PATH_LENGTH];
-    getFileName(filename, words, size);
+    getFileNameFromNote(filename, words, size);
 
     FILE *file;
-
     file = fopen(filename, "w");
 
     for (int i = 0; i < size; i++) {
@@ -119,140 +139,79 @@ void createNewNote(char** words, int size) {
     fclose(file);
 }
 
-void createCollection() {
+int getNumCollections() {
+    struct _finddata_t fileinfo; 
+    intptr_t handle;             
+    char path[FILE_PATH_LENGTH] = ""; 
+    snprintf(path, sizeof(path), "%s/*", COLLECTIONS_FOLDER);
 
+    handle = _findfirst(path, &fileinfo);
+    if(handle == -1) {
+        printf("No files found in the directory.\n");
+    } 
+
+    int numCollections = 0;
+    do{
+        if(isDirectory(fileinfo)) {
+            numCollections++;
+        }
+    }while(_findnext(handle, &fileinfo) == 0);
+
+    return numCollections;
 }
 
-void noCollectionsFound() {
-    printf("no collections found\n");
-    printf("[create <new collection name>]>");
+// Caller responsible for allocating collections and sending number of collections
+void getCollections(struct _finddata_t ** collections, int numCollections) {
 
-    // create new collection
-    char buffer[MAX_INPUT_LENGTH] = "";
-    while(!isValidCollectionName(buffer)) {
-        getInput(buffer, MAX_INPUT_LENGTH);
-        if(!isValidCollectionName(buffer)) {
-            printf("invalid collection name\n>");
-        }else {
-            char path[FILE_PATH_LENGTH] = "";
-            strcat(path, COLLECTIONS_FOLDER);
-            strcat(path, "/");
-            strcat(path, buffer);
-            if(_access(path, 0) == -1) {
-                if(_mkdir(path) == -1) {
-                    perror("failed to create collections folder\n");
-                }
-            }else {
-                printf("collection already exists\n");
-                strcpy(buffer, ""); // empty the buffer to make it invalid
-            }
-        }
-    }
-
-}
-
-bool printCollections() {
-    if(_access(COLLECTIONS_FOLDER, 0) == -1) {
-        // collection folder not found, create one and create new collection
-        if(_mkdir(COLLECTIONS_FOLDER) == -1) {
-            perror("failed to create collections folder\n");
-        }else {
-            return false;
-        }
-    }else {
-        // print collections
-        struct _finddata_t fileinfo; // Struct to store file information
-        intptr_t handle;             // Handle for directory searching
-        char path[FILE_PATH_LENGTH] = ""; 
-        strcat(path, COLLECTIONS_FOLDER);
-        strcat(path, "/*");
-
-        // Start searching for files
-        handle = _findfirst(path, &fileinfo);
-        if(handle == -1) {
-            //printf("No files found in the directory.\n");
-            return false;
-        } 
-
-        int i = 1;
-        do{
-            if(isDirectory(fileinfo) && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
-                printf("[%d] %s\n", i, fileinfo.name);
-                i++;
-            }
-        }while(_findnext(handle, &fileinfo) == 0);
-
-        // No collections found
-        if(i == 1) {
-            return false;
-        }
-        return true;
-
-    }
-}
-
-const char *get_filename(const char *path) {
-    const char *filename = strrchr(path, '/'); // Find the last '/' in the path
-    if (filename) {
-        return filename + 1; // Move past the '/'
-    }
-    return path; // If no '/' found, return the original path
-}
-
-void saveNoteToCollection(char* filePath) {
-
-    // create collection folder if there is none
-    if(_access(COLLECTIONS_FOLDER, 0) == -1) {
-        if(_mkdir(COLLECTIONS_FOLDER) == -1) {
-            perror("failed to create collections folder\n");
-        }
-    }
+    if(numCollections <= 0) return;
 
     struct _finddata_t fileinfo; 
     intptr_t handle;             
     char path[FILE_PATH_LENGTH] = ""; 
-    strcat(path, COLLECTIONS_FOLDER);
-    strcat(path, "/*");
+    snprintf(path, sizeof(path), "%s/*", COLLECTIONS_FOLDER);
 
     handle = _findfirst(path, &fileinfo);
     if(handle == -1) {
         printf("No files found in the directory.\n");
     } 
 
-    int i = 1;
+    int i = 0;
     do{
-        if(isDirectory(fileinfo) && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
-            printf("[%d] %s\n", i, fileinfo.name);
+        if(isDirectory(fileinfo) && i < numCollections) {
+            *collections[i] = fileinfo;
             i++;
         }
     }while(_findnext(handle, &fileinfo) == 0);
+}
 
-    int numCollections = i - 1;
-    struct _finddata_t* collections = (struct _finddata_t*)malloc((i - 1) * sizeof(struct _finddata_t)); 
-    handle = _findfirst(path, &fileinfo);
+const char* getFileNameFromPath(const char *path) {
+    const char *filename = strrchr(path, '/');
+    if(filename) {
+        return filename + 1;
+    }
+    return path; 
+}
 
-    handle = _findfirst(path, &fileinfo);
-    if(handle == -1) {
-        printf("No files found in the directory.\n");
-    } 
+void saveNoteToCollection(char* filePath) {
 
-    i = 0;
-    do{
-        if(isDirectory(fileinfo) && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
-            collections[i] = fileinfo;
-            i++;
-        }
-    }while(_findnext(handle, &fileinfo) == 0);
+    ensureDirectoryExists(COLLECTIONS_FOLDER);
 
-    if(i == 0) {
+    int numCollections = getNumCollections();
+    struct _finddata_t * collections = (struct _finddata_t *)malloc(numCollections * sizeof(struct _finddata_t)); 
+    getCollections(&collections, numCollections);
+
+    for(int i=0; i<numCollections; i++) {
+        printf("[%d] %s\n", i+1, collections[i].name);
+    }
+
+    if(numCollections <= 0) {
         printf("no collections found\n");
         printf("[create <new collection name>]>");
     }else {
         printf("[select: <number> | create <new collection name>]>");
     }
 
-
-    // prompt user:
+    // get input
     char input[MAX_INPUT_LENGTH];
     while(true) {
         getInput(input, MAX_INPUT_LENGTH);
@@ -262,47 +221,40 @@ void saveNoteToCollection(char* filePath) {
             continue;
         }
 
-        if(isdigit(input[0])) {
+        if(isdigit(input[0])) { // User attempts to choose a listed collection
             char *endptr;
             int inputNumber = strtol(input, &endptr, 10); // (base 10)
 
             if(*endptr == '\0' && inputNumber <= numCollections) {
-                // save to collections[inputNumber - 1]
                 char newPath[FILE_PATH_LENGTH] = "";
-                strcat(newPath, COLLECTIONS_FOLDER); // path to collections directory
-                strcat(newPath, "/");
-                strcat(newPath, collections[inputNumber - 1].name);
-                strcat(newPath, "/");
-                strcat(newPath, get_filename(filePath));
+                snprintf(newPath, sizeof(newPath), "%s/%s/%s", COLLECTIONS_FOLDER, collections[inputNumber - 1].name, getFileNameFromPath(filePath));
+
                 if(rename(filePath, newPath) != 0) {
                     perror("Error moving file");
                     printf("from: %s, to: %s\n", filePath, newPath);
                 }
-                return;
+                break;
             
             }else {
                 printf("invalid input\n>");
                 continue;
             }
-        }else {
-            // treat it as a new collection
+        }else { // User attempts to create and save the note to a new collection
             if(isValidCollectionName(input)) {
                 char newPath[FILE_PATH_LENGTH] = "";
-                strcat(newPath, COLLECTIONS_FOLDER);
-                strcat(newPath, "/");
-                strcat(newPath, input);
+                snprintf(newPath, sizeof(newPath), "%s/%s", COLLECTIONS_FOLDER, input);
+
                 if(_access(newPath, 0) == -1) {
                     if(_mkdir(newPath) == -1) {
                         perror("failed to create collections folder\n");
                         continue;
                     }
                 }else {
-                    printf("collection already exists\n");
+                    printf("collection already exists\n>");
                     continue;
                 }
 
-                strcat(newPath, "/");
-                strcat(newPath, get_filename(filePath));
+                snprintf(newPath, sizeof(newPath), "%s/%s", newPath, getFileNameFromPath(filePath));
                 if(rename(filePath, newPath) != 0) {
                     perror("Error moving file");
                     printf("from: %s, to: %s\n", filePath, newPath);
@@ -314,52 +266,31 @@ void saveNoteToCollection(char* filePath) {
                 printf("invalid input\n>");
                 continue;
             }
-
         }
-
-
     }
 }
 
 void reviewNewNotes() {
-    struct _finddata_t fileinfo; // Struct to store file information
-    intptr_t handle;             // Handle for directory searching
+    struct _finddata_t fileinfo; 
+    intptr_t handle;             
     char directoryPath[FILE_PATH_LENGTH] = ""; 
-    strcat(directoryPath, NEW_NOTES_FOLDER);
-    strcat(directoryPath, "/*");
+    snprintf(directoryPath, sizeof(directoryPath), "%s/*", NEW_NOTES_FOLDER);
 
-    // Start searching for files
     handle = _findfirst(directoryPath, &fileinfo);
     if(handle == -1) {
         printf("No files found in the directory.\n");
         return;
     }
 
-    // Iterate through all files in the directory
     int numNotes = 0;
     do{
         if(isNoteFile(fileinfo.name) && !isDirectory(fileinfo)) {
 
-            // open the file and print its contents
-            FILE *file;               
-            char ch;                  
             char path[FILE_PATH_LENGTH] = "";
-            strcat(path, NEW_NOTES_FOLDER);
-            strcat(path, "/");
-            strcat(path, fileinfo.name);
+            snprintf(path, sizeof(path), "%s/%s", NEW_NOTES_FOLDER, fileinfo.name);
 
-            file = fopen(path, "r");
-            if(file == NULL) {
-                perror("Error opening file");
-                return;
-            }
-
-            while((ch = fgetc(file)) != EOF) {
-                putchar(ch);
-            }
-            fclose(file);
-
-            // prompt the user
+            // print note and prompt the user
+            printFile(path);
             printf("\n[save: s | delete: d | ignore: enter]>");
 
             // get input
@@ -370,7 +301,7 @@ void reviewNewNotes() {
             switch (buffer[0]) {
             case 's':
                 saveNoteToCollection(path);
-                printf("saved to ...\n");
+                printf("saved\n");
                 break;
             case 'd':
                 if(remove(path) == -1) {
@@ -390,7 +321,6 @@ void reviewNewNotes() {
         }
     } while (_findnext(handle, &fileinfo) == 0);
 
-    // Close the search handle
     _findclose(handle);
 
     if(numNotes <= 0) {
