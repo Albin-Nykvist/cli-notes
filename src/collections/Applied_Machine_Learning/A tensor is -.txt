@@ -1,1 +1,0 @@
-A tensor is just an array that we can compute on the GPU making it faster. 
