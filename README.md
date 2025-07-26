@@ -1,11 +1,10 @@
+Quick and lightweight notetaking app for the command line. 
 
-Automatic note taking database for the command line. 
-Simply write a note, and the program will add it to an appropriate place in the database.
-Search the database using a fuzzy finder type search to find previous notes.
+This project was made because I wanted a simple way to take notes via the command line. To make it as simple as possible for lectures and other spontanious quick notes, I separated the management and saving of notes from the writing of notes. 
 
-More feature ideas:
-- Note walkthrough: read, edit and remove your latest notes to keep the database relevant and to review notes. 
-- Note review: review notes one by one. Useful for lectures.
-- Flashcard notes: for studying, get question, write quick answer, then compare your answer to saved answer. 
-- Theme the app, like a cli-pet you write notes to that you can configure and have some fun commands for. 
-  Pet, robot or some kind of mascot fits this, but should be optional, the default should be professional/office theme. 
+The app works as follows:
+1. The user writes a note that looks something like:
+     ->noteapp This is my note
+2. The user then reviews unsaved notes, and for every note, the user can choose where to save it or delete it:
+     ->noteapp -r
+3. The user can access saved notes in a similar way to the review.
