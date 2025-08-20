@@ -389,15 +389,18 @@ int stringToInteger(const char * string) {
 
 // UTIL/string
 int extractFirstInteger(const char * string) {
-    char *endptr;
-    int integer;
+    while (*string && !isdigit(*string)) {
+        string++;
+    }
 
-    integer = strtol(string, &endptr, 10);
-
-    if (endptr == string) {
+    if (*string == '\0') {
         return -1;
     }
-    return integer;
+
+    char *endptr;
+    int integer = strtol(string, &endptr, 10);
+
+    return integer; 
 }
 
 // CORE
@@ -529,27 +532,19 @@ void reviewNewNotes() {
 
 // used by editcollection and viewcollections
 void printCollection(const char * collectionName) {
-    int numCollections = getNumCollections();
-    struct _finddata_t * collections = (struct _finddata_t *)malloc(numCollections * sizeof(struct _finddata_t)); 
-    if(!getCollections(&collections, numCollections)) {
-        printf("failed to get collections\n");
+    int numNotes = getNumNotes(collectionName);
+    struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 
+    getNotes(&notes, numNotes, collectionName);
+    printf("%s (#%d):\n\n", collectionName, numNotes);
+    for(int i=0; i<numNotes; i++) {
+        printf("Note #%d\n", i+1);
+        char path[FILE_PATH_LENGTH];
+        snprintf(path, sizeof(path), "%s/%s/%s", COLLECTIONS_FOLDER, collectionName, notes[i].name);
+        printFile(path);
+        printf("\n\n");
     }
 
-    for(int i=0; i<numCollections; i++) {
-        int numNotes = getNumNotes(collections[i].name);
-        struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 
-        getNotes(&notes, numNotes, collections[i].name);
-        for(int i=0; i<numNotes; i++) {
-            printf("Note #%d\n", i+1);
-            char path[FILE_PATH_LENGTH];
-            snprintf(path, sizeof(path), "%s/%s/%s", COLLECTIONS_FOLDER, collectionName, notes[i].name);
-            printf("%s\n", path);
-            printFile(path);
-            printf("\n");
-        }
-    }
-
-    free(collections);
+    free(notes);
 }
 
 // Print the collections list and ask what the user wants to do with a given collection.
@@ -599,9 +594,8 @@ void viewCollections() {
         }else if(input[0] == 'p' || input[0] == 'd' || input[0] == 'e' || input[0] == 's') {
 
             int inputNumber = extractFirstInteger(input);
-            printf("%d\n", inputNumber);
 
-            if(inputNumber < 0 || inputNumber >= numCollections) {
+            if(inputNumber <= 0 || inputNumber > numCollections) {
                 printf("invalid input\n>");
                 continue;
             }
@@ -619,8 +613,10 @@ void viewCollections() {
                 break;
             
             default: // print
+                printCollection(collections[inputNumber - 1].name);
                 break;
             }
+            break; // exit loop
 
         }else { // User attempts to create and save the note to a new collection
 
