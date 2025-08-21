@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #include "../include/util.h"
+#include "../include/file.h"
 
 #define FILE_PATH_LENGTH 60
 
@@ -75,15 +76,6 @@ void getFileNameFromNote(char* buffer, char** words, int size) {
     strcat(buffer, ending);
 }
 
-// FILE
-const char* getFileNameFromPath(const char *path) {
-    const char *filename = strrchr(path, '/');
-    if(filename) {
-        return filename + 1;
-    }
-    return path; 
-}
-
 // ARG
 bool hasFlag(char* flag, char ** argv, int argc) {
     if(argc < 2) return false;
@@ -113,22 +105,6 @@ bool isValidCollectionName(const char* collectionName) {
     return true;
 }
 
-// FILE
-bool isDirectory(struct _finddata_t fileinfo) {
-    return fileinfo.attrib & _A_SUBDIR && strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0;
-}
-
-// FILE
-bool ensureDirectoryExists(const char * directoryPath) {
-    if(_access(directoryPath, 0) == -1) {
-        if(_mkdir(directoryPath) == -1) {
-            perror("failed to create folder\n");
-            return false;
-        }
-    }
-    return true;
-}
-
 // COLLECTION
 bool createNewCollection(const char * collectionName) {
     if(!ensureDirectoryExists(COLLECTIONS_FOLDER)) {
@@ -151,24 +127,6 @@ bool createNewCollection(const char * collectionName) {
         printf("failed to create new collection folder\n");
         return false;
     }
-    return true;
-}
-
-// FILE
-bool printFile(const char * path) {
-    FILE *file;               
-    char ch;                  
-
-    file = fopen(path, "r");
-    if(file == NULL) {
-        perror("Error opening file");
-        return false;
-    }
-
-    while((ch = fgetc(file)) != EOF) {
-        putchar(ch);
-    }
-    fclose(file);
     return true;
 }
 
@@ -292,59 +250,6 @@ int getNumNotes(const char * collectionName) {
     }while(_findnext(handle, &fileinfo) == 0);
 
     return numNotes;
-}
-
-// FILE
-char * readFileToString(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        perror("Failed to open file");
-        return NULL;
-    }
-
-    // Move to the end of the file to get its size
-    if (fseek(file, 0, SEEK_END) != 0) {
-        perror("Failed to seek to end of file");
-        fclose(file);
-        return NULL;
-    }
-
-    // Get the size of the file
-    long fileSize = ftell(file);
-    if (fileSize == -1L) {
-        perror("Failed to get file size");
-        fclose(file);
-        return NULL;
-    }
-
-    // Reset the file position to the beginning
-    rewind(file);
-
-    // Allocate memory for the file contents + null terminator
-    char *buffer = (char *)malloc(fileSize + 1);
-    if (!buffer) {
-        perror("Failed to allocate memory");
-        fclose(file);
-        return NULL;
-    }
-
-    // Read the file contents into the buffer
-    size_t bytesRead = fread(buffer, 1, fileSize, file);
-    if (bytesRead < (size_t)fileSize) {
-        if (ferror(file)) {
-            perror("Error reading file");
-            free(buffer);
-            fclose(file);
-            return NULL;
-        }
-    }
-
-    // Null-terminate the buffer
-    buffer[bytesRead] = '\0';
-
-    // Close the file and return the buffer
-    fclose(file);
-    return buffer;
 }
 
 // Caller responsible for allocating notes and sending number of notes: use getNumNotes before calling this function
@@ -509,43 +414,7 @@ void reviewNewNotes() {
     }
 }
 
-int removeDirectory(const char *path) {
-    DIR *dir = opendir(path);
-    if (!dir) {
-        perror("opendir");
-        return -1;
-    }
-
-    struct dirent *entry;
-    char filepath[1024];
-
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
-
-        snprintf(filepath, sizeof(filepath), "%s/%s", path, entry->d_name);
-
-        struct stat statbuf;
-        if (stat(filepath, &statbuf) == 0) {
-            if (S_ISDIR(statbuf.st_mode)) {
-                removeDirectory(filepath);
-            } else {
-                if (remove(filepath) != 0) {
-                    perror("remove file");
-                }
-            }
-        }
-    }
-    closedir(dir);
-
-    if (rmdir(path) != 0) {
-        perror("rmdir");
-        return -1;
-    }
-
-    return 0;
-}
-
+// COLLECTION
 int deleteCollection(const char * collectionName) {
     char path[FILE_PATH_LENGTH] = ""; 
     snprintf(path, sizeof(path), "%s/%s", COLLECTIONS_FOLDER, collectionName);
@@ -553,6 +422,7 @@ int deleteCollection(const char * collectionName) {
 }
 
 // used by editcollection and viewcollections
+// COLLECTION
 void printCollection(const char * collectionName) {
     int numNotes = getNumNotes(collectionName);
     struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 
@@ -577,7 +447,7 @@ void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollect
         for(int i=0; i<numCollections; i++) {
             printf("[%d] %s (#%d)\n", i+1, collections[i].name, getNumNotes(collections[i].name));
         }
-        printf("[print: p + <number> | delete: d + <number> | export to textfile: e + <number> | create: c + <collection name>]>");
+        printf("[print: p + <number> | delete: d + <number> | export to textfile: e + <number> | create: c + <collection name> | quit: q]>");
     }
 }
 
@@ -668,21 +538,23 @@ void viewCollections() {
         printf("failed to get collections\n");
     }
 
-    // print prompt to user
     printViewCollectionsPrompt(collections, numCollections);
 
-    // get input from user
     char input[MAX_INPUT_LENGTH];
     while(true) {
         getInput(input, MAX_INPUT_LENGTH);
         int size = sizeof(input) / sizeof(char);
-        if(size < 2) {
+        if(size <= 0) {
+            printf("invalid input\n>");
+            continue;
+        }
+        if(input[0] != 'q' && size < 2) {
             printf("invalid input\n>");
             continue;
         }
 
-        int inputNumber = extractFirstInteger(input);   // this does not work for creating new collections
-        if(input[0] != 'c') {
+        int inputNumber = extractFirstInteger(input);   
+        if(input[0] != 'c' && input[0] != 'q') {
             if(inputNumber <= 0 || inputNumber > numCollections) {
                 printf("invalid input\n>");
                 continue;
@@ -729,7 +601,7 @@ void viewCollections() {
             printf("quitting...\n");
             exit(0);  
             break;
-        default: // print
+        default: 
             printCollection(collections[inputNumber - 1].name);
             break;
         }
