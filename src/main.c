@@ -9,6 +9,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#include "../include/util.h"
+
 #define FILE_PATH_LENGTH 60
 
 #define BUFFER_SIZE 1024 // used for exporting to textfile
@@ -378,33 +380,6 @@ bool getNotes(struct _finddata_t ** notes, int numNotes, const char * collection
     }
 
     return true;
-}
-
-// UTIL/string
-int stringToInteger(const char * string) {
-    char *endptr;
-    int integer = strtol(string, &endptr, 10); // (base 10)
-
-    if(*endptr != '\0' && *endptr != '\n') {
-        return -1;
-    }
-    return integer;
-}
-
-// UTIL/string
-int extractFirstInteger(const char * string) {
-    while (*string && !isdigit(*string)) {
-        string++;
-    }
-
-    if (*string == '\0') {
-        return -1;
-    }
-
-    char *endptr;
-    int integer = strtol(string, &endptr, 10);
-
-    return integer; 
 }
 
 // CORE
