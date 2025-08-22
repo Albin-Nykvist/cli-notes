@@ -242,7 +242,6 @@ int deleteCollection(const char * collectionName) {
     return removeDirectory(path);
 }
 
-// used by editcollection and viewcollections
 void printCollection(const char * collectionName) {
     int numNotes = getNumNotes(collectionName);
     struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 

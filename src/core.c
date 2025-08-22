@@ -226,12 +226,6 @@ int exportCollection(const char *collectionName, const char *exportFile) {
     return 0;
 }
 
-// Print the collections list and ask what the user wants to do with a given collection.
-// Note Collections:
-// [1] Chemistry, 32 notes
-// [2] Ethics, 12 notes
-// [3] Computer security, 4 notes
-// [print: p + <number> | delete: d + <number> | edit: e + <number> | save as textfile: s + <number> | create new collection: <new collection name>]
 void viewCollections() {
     int numCollections = getNumCollections();
     struct _finddata_t * collections = (struct _finddata_t *)malloc(numCollections * sizeof(struct _finddata_t)); 
