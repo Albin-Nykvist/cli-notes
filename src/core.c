@@ -150,7 +150,7 @@ void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollect
         for(int i=0; i<numCollections; i++) {
             printf("[%d] %s (#%d)\n", i+1, collections[i].name, getNumNotes(collections[i].name));
         }
-        printf("[print: p + <number> | delete: d + <number> | export to textfile: e + <number> | create: c + <collection name> | quit: q]>");
+        printf("[print: p + <number> | delete: d + <number> | export to text file: e + <number> | create: c + <collection name> | quit: q]>");
     }
 }
 

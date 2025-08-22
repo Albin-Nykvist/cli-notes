@@ -1,10 +1,24 @@
-Quick and lightweight notetaking app for the command line. 
+# 📓 Quick & Lightweight Command-Line Notetaking
 
-This project was made because I wanted a simple way to take notes via the command line. To make it as simple as possible for lectures and other spontanious quick notes, I separated the management and saving of notes from the writing of notes. 
+**Note** is a minimalist **CLI notetaking tool**.  
+It was built because I wanted a simple way to take notes during lectures, meetings, or any situation where it’s convenient to jot things down directly in the terminal.  
 
-The app works as follows:
-1. The user writes a note that looks something like:
-     ->noteapp This is my note
-2. The user then reviews unsaved notes, and for every note, the user can choose where to save it or delete it:
-     ->noteapp -r
-3. The user can access saved notes in a similar way to the review.
+Unlike most note apps, **Note** separates **writing notes** from **organizing/saving notes**, so you can take notes instantly without worrying about organizing them.  
+
+---
+
+## ✨ Features
+- ⚡ Ultra-fast notetaking from the command line  
+- 📝 Review unsaved notes before committing them to collections  
+- 📂 Organize notes into collections or delete them quickly  
+- 📤 Export collections to text files for backup or sharing  
+- 🪶 Lightweight C implementation, no external dependencies  
+
+---
+
+## 🚀 Usage
+
+### 1. Writing notes
+Write a note directly from your terminal:
+```bash
+note This is my note
