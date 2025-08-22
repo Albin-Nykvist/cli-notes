@@ -11,6 +11,7 @@
 
 #include "../include/util.h"
 #include "../include/file.h"
+#include "../include/io.h"
 
 #define FILE_PATH_LENGTH 60
 
@@ -18,38 +19,6 @@
 
 const char* NEW_NOTES_FOLDER = "../note_data/new_notes";
 const char* COLLECTIONS_FOLDER = "../note_data/collections";
-
-
-// TUI input
-#define MAX_INPUT_LENGTH 100
-
-// IO
-void getInput(char* buffer, int size) {
-    strcpy(buffer, "");
-    if(fgets(buffer, size-1, stdin) == NULL) {
-        printf("Error reading input\n");
-        return;
-    }
-
-    if (buffer[strlen(buffer) - 1] != '\n') {
-        char c;
-        while ((c = getchar()) != '\n' && c != EOF);
-    }
-
-    buffer[strlen(buffer) - 1] = '\0';
-}
-
-// ARG
-bool hasFlag(char* flag, char ** argv, int argc) {
-    if(argc < 2) return false;
-
-    for(int i=1; i<argc; i++) {
-        if(strcmp(argv[i], flag) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
 
 // Assumes the max buffer size is FILE_PATH_LENGTH
 // Note
