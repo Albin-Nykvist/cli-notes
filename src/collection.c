@@ -11,7 +11,6 @@
 #include "../include/collection.h"
 
 // Assumes the max buffer size is FILE_PATH_LENGTH
-// Note
 void getFileNameFromNote(char* buffer, char** words, int size) {
     strcpy(buffer, "");
     if(size <= 0) return;
@@ -47,13 +46,11 @@ void getFileNameFromNote(char* buffer, char** words, int size) {
     strcat(buffer, ending);
 }
 
-// NOTE
 bool isNoteFile(char* filename) {
     // TODO: also check if it is a .txt file
     return (strcmp(filename, ".") != 0 && strcmp(filename, "..") != 0);
 }
 
-// COLLECTION
 bool isValidCollectionName(const char* collectionName) {
     int size = sizeof(collectionName) / sizeof(char);
     if(size <= 0) return false;
@@ -64,7 +61,6 @@ bool isValidCollectionName(const char* collectionName) {
     return true;
 }
 
-// COLLECTION
 bool createNewCollection(const char * collectionName) {
     if(!ensureDirectoryExists(COLLECTIONS_FOLDER)) {
         printf("failed to create collections folder, attempted path: %s\n", COLLECTIONS_FOLDER);
@@ -89,7 +85,6 @@ bool createNewCollection(const char * collectionName) {
     return true;
 }
 
-// NOTE
 void createNewNote(char** words, int size) {
     ensureDirectoryExists(NEW_NOTES_FOLDER);
 
@@ -108,7 +103,6 @@ void createNewNote(char** words, int size) {
     fclose(file);
 }
 
-// COLLECTIONS
 int getNumCollections() {
     if(!ensureDirectoryExists(COLLECTIONS_FOLDER)) {
         return -1;
@@ -135,7 +129,6 @@ int getNumCollections() {
     return numCollections;
 }
 
-// COLLECTIONS
 bool moveNoteToCollection(const char * notePath, const char * collectionName) {
     char destinationPath[FILE_PATH_LENGTH] = "";
     snprintf(destinationPath, sizeof(destinationPath), "%s/%s/%s", COLLECTIONS_FOLDER, collectionName, getFileNameFromPath(notePath));
@@ -149,7 +142,6 @@ bool moveNoteToCollection(const char * notePath, const char * collectionName) {
 }
 
 // Caller responsible for allocating collections and sending number of collections
-// COLLECTIONS
 bool getCollections(struct _finddata_t ** collections, int numCollections) {
 
     if(numCollections <= 0) return true;
@@ -183,7 +175,6 @@ bool getCollections(struct _finddata_t ** collections, int numCollections) {
     return true;
 }
 
-// COLLECTIONS
 int getNumNotes(const char * collectionName) {
     char path[FILE_PATH_LENGTH] = "";
     snprintf(path, sizeof(path), "%s/%s/*", COLLECTIONS_FOLDER, collectionName);
@@ -212,7 +203,6 @@ int getNumNotes(const char * collectionName) {
 }
 
 // Caller responsible for allocating notes and sending number of notes: use getNumNotes before calling this function
-// COLLECTIONS
 bool getNotes(struct _finddata_t ** notes, int numNotes, const char * collectionName) {
 
     if(numNotes <= 0) return true;
@@ -246,7 +236,6 @@ bool getNotes(struct _finddata_t ** notes, int numNotes, const char * collection
     return true;
 }
 
-// COLLECTION
 int deleteCollection(const char * collectionName) {
     char path[FILE_PATH_LENGTH] = ""; 
     snprintf(path, sizeof(path), "%s/%s", COLLECTIONS_FOLDER, collectionName);
@@ -254,7 +243,6 @@ int deleteCollection(const char * collectionName) {
 }
 
 // used by editcollection and viewcollections
-// COLLECTION
 void printCollection(const char * collectionName) {
     int numNotes = getNumNotes(collectionName);
     struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 

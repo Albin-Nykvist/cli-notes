@@ -79,7 +79,6 @@ void saveNoteToCollection(char* filePath) {
     free(collections);
 }
 
-// CORE
 void reviewNewNotes() {
     char directoryPath[FILE_PATH_LENGTH] = ""; 
     snprintf(directoryPath, sizeof(directoryPath), "%s/*", NEW_NOTES_FOLDER);
@@ -143,7 +142,6 @@ void reviewNewNotes() {
     }
 }
 
-// CORE
 void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollections) {
     if(numCollections <= 0) {
         printf("no collections found\n");
@@ -156,7 +154,6 @@ void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollect
     }
 }
 
-// CORE/HELPER
 void updateCollections(struct _finddata_t ** collections, int * numCollections) {
     *numCollections = getNumCollections();
 
@@ -177,7 +174,6 @@ void updateCollections(struct _finddata_t ** collections, int * numCollections) 
     }
 }
 
-// CORE
 int exportCollection(const char *collectionName, const char *exportFile) {
     FILE *out = fopen(exportFile, "w");
     if (!out) {
