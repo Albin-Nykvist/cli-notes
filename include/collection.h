@@ -2,6 +2,7 @@
 #ifndef COLLECTION_H
 #define COLLECTION_H
 
+#include <dirent.h>
 
 bool isNoteFile(char* filename);
 void createNewNote(char** words, int size);
