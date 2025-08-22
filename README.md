@@ -22,14 +22,14 @@ This app separates **writing notes** from **organizing/saving notes**, so you ca
 Write a note directly from your terminal:
 ```bash
 note This is my note
-
+```
 ### 2. Reviewing notes
 Review notes and organize them into collections:
 ```bash
 note -r
 overfitting - too much focus on the training set
 [save: s | delete: d | ignore: enter]>
-
+```
 ### 3. View collections of notes
 Handle collections of notes:
 ```bash
@@ -37,3 +37,4 @@ note -v
 [1] School (#2)
 [2] Machine_learning (#3)
 [print: p + <number> | delete: d + <number> | export to textfile: e + <number> | create: c + <collection name> | quit: q]>
+```
