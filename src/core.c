@@ -181,10 +181,9 @@ int exportCollection(const char *collectionName, const char *exportFile) {
         return -1;
     }
 
-    // Build search pattern for files in collection
     char collectionPath[FILE_PATH_LENGTH] = "";
     snprintf(collectionPath, sizeof(collectionPath), "%s/%s", COLLECTIONS_FOLDER, collectionName);
-    char searchPath[260];
+    char searchPath[FILE_PATH_LENGTH];
     snprintf(searchPath, sizeof(searchPath), "%s\\*.*", collectionPath);
 
     struct _finddata_t fileinfo;
@@ -200,7 +199,7 @@ int exportCollection(const char *collectionName, const char *exportFile) {
     do {
         if (fileinfo.attrib & _A_SUBDIR) continue;
 
-        char filepath[260];
+        char filepath[FILE_PATH_LENGTH];
         snprintf(filepath, sizeof(filepath), "%s\\%s", collectionPath, fileinfo.name);
 
         FILE *in = fopen(filepath, "r");
