@@ -39,6 +39,18 @@ void getInput(char* buffer, int size) {
     buffer[strlen(buffer) - 1] = '\0';
 }
 
+// ARG
+bool hasFlag(char* flag, char ** argv, int argc) {
+    if(argc < 2) return false;
+
+    for(int i=1; i<argc; i++) {
+        if(strcmp(argv[i], flag) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Assumes the max buffer size is FILE_PATH_LENGTH
 // Note
 void getFileNameFromNote(char* buffer, char** words, int size) {
@@ -74,18 +86,6 @@ void getFileNameFromNote(char* buffer, char** words, int size) {
     }
 
     strcat(buffer, ending);
-}
-
-// ARG
-bool hasFlag(char* flag, char ** argv, int argc) {
-    if(argc < 2) return false;
-
-    for(int i=1; i<argc; i++) {
-        if(strcmp(argv[i], flag) == 0) {
-            return true;
-        }
-    }
-    return false;
 }
 
 // NOTE
@@ -439,6 +439,7 @@ void printCollection(const char * collectionName) {
     free(notes);
 }
 
+// CORE
 void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollections) {
     if(numCollections <= 0) {
         printf("no collections found\n");
@@ -451,6 +452,7 @@ void printViewCollectionsPrompt(struct _finddata_t * collections, int numCollect
     }
 }
 
+// CORE/HELPER
 void updateCollections(struct _finddata_t ** collections, int * numCollections) {
     *numCollections = getNumCollections();
 
@@ -471,8 +473,7 @@ void updateCollections(struct _finddata_t ** collections, int * numCollections) 
     }
 }
 
-
-
+// CORE
 int exportCollection(const char *collectionName, const char *exportFile) {
     FILE *out = fopen(exportFile, "w");
     if (!out) {
@@ -610,33 +611,6 @@ void viewCollections() {
     }
 
     free(collections);
-}
-
-// Print the whole collection like a text file, numbering all notes.
-// Name: Chemistry
-// Notes: 32
-// 
-// Note 1: 
-// The exam requires you to write at least 40 answers to the questions.
-//
-// Note 2: 
-// The exam requires you to write at least 40 answers to the questions.
-//
-// [rename: r + <new name> | delete note/s: d + <number>]
-void editCollection() {
-
-/*
-    for(int i=0; i<numCollections; i++) {
-        int numNotes = getNumNotes(collections[i].name);
-        struct _finddata_t * notes = (struct _finddata_t *)malloc(numNotes * sizeof(struct _finddata_t)); 
-        getNotes(notes, numNotes, collections[i].name);
-        for(int i=0; i<numNotes; i++) {
-            printf("Note #1\n");
-            printFile(notes[i].name);
-            printf("\n");
-        }
-    }
-*/
 }
 
 int main(int argc, char** argv) {
